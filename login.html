@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Árvore do Bem - Realismo Interativo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: #71bbf5; 
+        }
+
+        /* Container principal que mantém a proporção da imagem */
+        .scenery-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #1a1a1a;
+        }
+
+        /* Imagem de Fundo Realista */
+        .scenery-bg {
+            height: 100%;
+            width: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* Camada invisível para alinhar os botões sobre as maçãs reais */
+        .interaction-layer {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+        }
+
+        /* Áreas interativas em cima das maçãs da foto */
+        .apple-hotspot {
+            position: absolute;
+            width: 3.5%;
+            aspect-ratio: 1;
+            border-radius: 50%;
+            cursor: pointer;
+            transform: translate(-50%, -50%);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background: rgba(255, 255, 255, 0);
+            border: 2px solid transparent;
+        }
+
+        .apple-hotspot:hover {
+            background: rgba(239, 68, 68, 0.25);
+            border-color: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 0 25px rgba(239, 68, 68, 0.9);
+            transform: translate(-50%, -50%) scale(1.35);
+        }
+
+        .apple-hotspot.harvested {
+            pointer-events: none;
+            background: rgba(0, 0, 0, 0.5) !important;
+            border-color: rgba(255, 255, 255, 0.15) !important;
+            box-shadow: none !important;
+            transform: translate(-50%, -50%) scale(0.85);
+            opacity: 0.4;
+        }
+
+        /* Estilo Base Glassmorphism (Usado no Título e no Mural) */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Slots de Maçãs do mural modernos */
+        .mural-slot {
+            width: 38px;
+            height: 38px;
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
+            background: rgba(255, 255, 255, 0.03);
+            position: relative;
+        }
+
+        .mural-slot::after {
+            content: attr(data-day);
+            position: absolute;
+            bottom: -16px;
+            font-size: 8px;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Slot Preenchido com degradê premium */
+        .mural-slot.completed {
+            background: linear-gradient(135deg, #ff5252, #c62828);
+            border-color: #ffffff;
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 8px 20px rgba(239, 68, 68, 0.5);
+        }
+
+        .mural-slot svg {
+            opacity: 0.15;
+            fill: #ffffff;
+            transition: all 0.4s ease;
+            transform: scale(0.9);
+        }
+
+        .mural-slot.completed svg {
+            opacity: 1;
+            fill: #ffffff;
+            transform: scale(1.05);
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        }
+
+        /* Animação de entrada para o Modal */
+        @keyframes modalAppear {
+            from { transform: translate(-50%, -45%) scale(0.95); opacity: 0; }
+            to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+
+        /* Caixa da Mensagem / Modal Premium */
+        #mission-card {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 32px;
+            box-shadow: 0 40px 80px rgba(15, 23, 42, 0.35);
+            z-index: 100;
+            max-width: 460px;
+            width: 92%;
+            text-align: center;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            animation: modalAppear 0.4s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.4);
+            z-index: 99;
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            transition: all 0.3s ease;
+        }
+
+        .btn-complete {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 16px 32px;
+            border-radius: 16px;
+            margin-top: 24px;
+            cursor: pointer;
+            border: none;
+            font-weight: 700;
+            font-size: 0.95rem;
+            letter-spacing: 0.5px;
+            transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-complete:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.45);
+            filter: brightness(1.05);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="scenery-container">
+        <img src="images/arvore.png" alt="Cenário Árvore" class="scenery-bg">
+
+        <div class="interaction-layer" id="apples-container"></div>
+    </div>
+
+    <div class="fixed top-6 left-6 z-20 glass-panel py-3 px-5 rounded-2xl flex items-center space-x-3 select-none">
+        <div class="bg-red-500/20 p-2 rounded-xl">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#ef4444">
+                <path d="M12 5c.44-1.21 1.48-2.26 2.8-2.7-1.12 1.47-1.18 3.32-.34 4.71C13.21 6.57 12 5 12 5zm6.5 3c-1.34 0-2.43.83-3.16 1.74-.83-.91-1.92-1.74-3.26-1.74-2.82 0-5.08 2.5-5.08 5.59 0 4.14 4.09 7.6 7.84 9.17 3.75-1.57 7.84-5.03 7.84-9.17 0-3.09-2.26-5.59-5.08-5.59z"/>
+            </svg>
+        </div>
+        <div>
+            <h1 class="text-white font-black text-lg tracking-wide leading-none">Árvore Frutífera</h1>
+            <span class="text-white/60 text-[10px] font-medium tracking-widest uppercase block mt-1">Cultivando Virtudes</span>
+        </div>
+    </div>
+
+    <div id="mural" class="glass-panel fixed top-6 right-6 z-20 p-5 rounded-3xl w-80 select-none">
+        <div class="flex justify-between items-center mb-4 pb-2 border-b border-white/10">
+            <div>
+                <h3 class="text-white font-black text-xs uppercase tracking-widest">Painel de Missões</h3>
+                <p class="text-white/50 text-[10px] font-medium mt-0.5">Realize uma boa ação por dia</p>
+            </div>
+            <div class="bg-white/10 px-3 py-1 rounded-full">
+                <span id="counter-text" class="text-white font-black text-xs tracking-wider">0 / 7</span>
+            </div>
+        </div>
+        
+        <div id="slots-container" class="flex justify-between items-center pt-1 pb-4">
+            </div>
+    </div>
+
+    <div id="overlay" class="overlay" onclick="closeModal()"></div>
+    
+    <div id="mission-card">
+        <div class="mx-auto w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mb-5 border border-emerald-100 shadow-sm">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            </svg>
+        </div>
+
+        <span class="text-[11px] font-bold text-emerald-600 uppercase tracking-widest block mb-1">Valor do Dia</span>
+        <h2 id="mission-title" class="text-3xl font-black text-gray-900 tracking-tight mb-2"></h2>
+        <p id="mission-meaning" class="text-gray-500 text-sm leading-relaxed max-w-sm mx-auto mb-6 px-2"></p>
+        
+        <div class="bg-slate-50 p-5 rounded-2xl border border-slate-100 text-left mb-2">
+            <span class="text-[10px] font-bold uppercase text-slate-400 tracking-wider block mb-1.5">Sua Missão Prática:</span>
+            <p id="mission-task" class="text-gray-700 font-semibold text-base leading-relaxed"></p>
+        </div>
+        
+        <button class="btn-complete w-full text-center" onclick="completeAction()">Marcar como Cumprida</button>
+        <button class="mt-4 text-slate-400 text-xs font-bold uppercase tracking-widest block w-full hover:text-slate-600 transition duration-200" onclick="closeModal()">Fazer Mais Tarde</button>
+    </div>
+
+    <script>
+        const misionesSemanales = [
+            { title: "Empatia", meaning: "A virtude de se colocar verdadeiramente no lugar do outro para compreender seus sentimentos.", task: "Dedique 10 minutos para ouvir alguém hoje sem interromper, julgar ou dar opiniões prontas." },
+            { title: "Gratidão", meaning: "O ato nobre de reconhecer e valorizar o que já temos e tudo o que recebemos dos outros.", task: "Envie uma mensagem sincera para alguém agradecendo por algo bom que essa pessoa fez por você recentemente." },
+            { title: "Gentileza", meaning: "Pequenos gestos de amor e consideração espontâneos que transformam o dia de quem os recebe.", task: "Faça um elogio autêntico e inesperado para um colega de trabalho, de estudos ou mesmo para um familiar." },
+            { title: "Paciência", meaning: "Manter a serenidade, o equilíbrio e o autocontrole diante da espera ou das contrariedades.", task: "Ao encarar uma fila ou qualquer lentidão hoje, respire fundo por 3 vezes e responda com um sorriso amigável." },
+            { title: "Solidariedade", meaning: "União legítima, apoio mútuo e compromisso prático em amparar quem se encontra em necessidade.", task: "Separe pelo menos uma peça de roupa, livro ou objeto útil em bom estado e planeje uma doação." },
+            { title: "Respeito", meaning: "Honrar a individualidade, aceitar as diferenças e valorizar o espaço sagrado do próximo.", task: "Mesmo que discorde de alguém hoje, escute até o final com atenção e valide o direito da pessoa de pensar diferente." },
+            { title: "Otimismo", meaning: "A habilidade de focar nas soluções e enxergar o aprendizado mesmo nos momentos mais desafiadores.", task: "Ao se deparar com qualquer contratempo hoje, anote imediatamente duas soluções ao invés de reclamar." }
+        ];
+
+        let completedCount = 0;
+        let currentMissionIndex = null;
+        const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+        function generateMural() {
+            const container = document.getElementById('slots-container');
+            for (let i = 0; i < 7; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'mural-slot';
+                slot.id = `slot-${i}`;
+                slot.setAttribute('data-day', diasSemana[i]);
+                slot.title = `Missão do ${diasSemana[i]}`;
+                slot.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24">
+                        <path d="M12 5c.44-1.21 1.48-2.26 2.8-2.7-1.12 1.47-1.18 3.32-.34 4.71C13.21 6.57 12 5 12 5zm6.5 3c-1.34 0-2.43.83-3.16 1.74-.83-.91-1.92-1.74-3.26-1.74-2.82 0-5.08 2.5-5.08 5.59 0 4.14 4.09 7.6 7.84 9.17 3.75-1.57 7.84-5.03 7.84-9.17 0-3.09-2.26-5.59-5.08-5.59z"/>
+                    </svg>
+                `;
+                container.appendChild(slot);
+            }
+        }
+
+        function alignAppleHotspots() {
+            const container = document.getElementById('apples-container');
+            
+            // Coordenadas idênticas às da sua foto arvore.png
+            const realAppleCoordinates = [
+                { top: '42.3%', left: '32.1%' },
+                { top: '28.8%', left: '39.6%' },
+                { top: '45.4%', left: '37.8%' },
+                { top: '28.1%', left: '49.1%' },
+                { top: '49.0%', left: '47.9%' },
+                { top: '41.1%', left: '59.3%' },
+                { top: '54.5%', left: '63.9%' }
+            ];
+
+            misionesSemanales.forEach((mission, index) => {
+                const hotspot = document.createElement('div');
+                hotspot.className = 'apple-hotspot';
+                hotspot.id = `hotspot-${index}`;
+                hotspot.style.top = realAppleCoordinates[index].top;
+                hotspot.style.left = realAppleCoordinates[index].left;
+                hotspot.title = `Ver valor: ${mission.title}`;
+                
+                hotspot.onclick = () => openMission(index);
+                container.appendChild(hotspot);
+            });
+        }
+
+        function openMission(index) {
+            currentMissionIndex = index;
+            const currentData = misionesSemanales[index];
+            
+            document.getElementById('mission-title').innerText = currentData.title;
+            document.getElementById('mission-meaning').innerText = `"${currentData.meaning}"`;
+            document.getElementById('mission-task').innerText = currentData.task;
+            
+            document.getElementById('overlay').style.display = 'block';
+            document.getElementById('mission-card').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('overlay').style.display = 'none';
+            document.getElementById('mission-card').style.display = 'none';
+        }
+
+        function completeAction() {
+            if (completedCount < 7) {
+                const currentSlot = document.getElementById(`slot-${completedCount}`);
+                if (currentSlot) {
+                    currentSlot.classList.add('completed');
+                }
+                
+                completedCount++;
+                document.getElementById('counter-text').innerText = `${completedCount} / 7`;
+                
+                const targetHotspot = document.getElementById(`hotspot-${currentMissionIndex}`);
+                if (targetHotspot) {
+                    targetHotspot.classList.add('harvested');
+                    targetHotspot.title = `Missão de ${misionesSemanales[currentMissionIndex].title} concluída!`;
+                }
+
+                if (completedCount === 7) {
+                    setTimeout(() => {
+                        alert("Parabéns! Você completou suas 7 missões e encheu a semana de boas ações! A Árvore do Bem está completamente florida graças ao seu esforço! 🌟🍎");
+                    }, 400);
+                }
+            }
+            closeModal();
+        }
+
+        window.onload = () => {
+            generateMural();
+            alignAppleHotspots();
+        };
+    </script>
+</body>
+</html>
