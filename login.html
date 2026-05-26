@@ -2,262 +2,305 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Árvore do Bem - Realismo Interativo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Árvore do Bem - Tela Cheia Interativa</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* Reset para travar a tela cheia e evitar scrolls fantasmas no mobile */
         body, html {
             margin: 0;
             padding: 0;
-            height: 100%;
-            width: 100%;
+            height: 100vh;
+            width: 100vw;
             overflow: hidden;
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background-color: #71bbf5; 
+            background: linear-gradient(to bottom, #a1c4fd 0%, #c2e9fb 100%);
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* Container principal que mantém a proporção da imagem */
-        .scenery-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: #1a1a1a;
-        }
-
-        /* Imagem de Fundo Realista */
-        .scenery-bg {
-            height: 100%;
-            width: 100%;
-            object-fit: cover;
+        /* Container que ocupa 100% da janela do usuário */
+        .fullscreen-scenery {
             position: absolute;
-            top: 0;
-            left: 0;
+            inset: 0;
+            width: 100%;
+            height: 100%;
             z-index: 1;
         }
 
-        /* Camada invisível para alinhar os botões sobre as maçãs reais */
-        .interaction-layer {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            z-index: 5;
+        /* Árvore adaptável em tela cheia */
+        .tree-vector {
+            position: absolute;
+            bottom: -2%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: auto;
+            height: 85%;
+            aspect-ratio: 1;
+            z-index: 2;
+            filter: drop-shadow(0 15px 30px rgba(16, 44, 12, 0.25));
         }
 
-        /* Áreas interativas em cima das maçãs da foto */
+        /* Ajuste para telas menores (celulares verticais) */
+        @media (max-width: 768px) {
+            .tree-vector {
+                height: 65%; /* Abre espaço para a interface superior no mobile */
+                bottom: 5%;
+            }
+        }
+
+        /* Chão de grama fixado na base da tela */
+        .ground-grass {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 14%;
+            background: linear-gradient(to top, #235e26, #388e3c);
+            z-index: 3;
+            border-top-left-radius: 50% 15px;
+            border-top-right-radius: 50% 15px;
+        }
+
+        /* Sistema de Folhas/Pétalas */
+        .leaves-container {
+            position: absolute;
+            inset: 0;
+            z-index: 4;
+            pointer-events: none;
+        }
+
+        .falling-leaf {
+            position: absolute;
+            background: linear-gradient(135deg, #ffb3ba, #ffdfba);
+            border-radius: 0 70% 0 70%;
+            opacity: 0.7;
+            animation: floatDown infinite linear;
+        }
+
+        @keyframes floatDown {
+            0% { transform: translateY(-5vh) rotate(0deg) translateX(0); opacity: 0; }
+            10% { opacity: 0.7; }
+            90% { opacity: 0.7; }
+            100% { transform: translateY(105vh) rotate(720deg) translateX(80px); opacity: 0; }
+        }
+
+        /* Camada invisível de botões que acompanha o tamanho da árvore */
+        .interaction-box {
+            position: absolute;
+            bottom: -2%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: auto;
+            height: 85%;
+            aspect-ratio: 1;
+            z-index: 10;
+        }
+
+        @media (max-width: 768px) {
+            .interaction-box {
+                height: 65%;
+                bottom: 5%;
+            }
+        }
+
+        /* Hotspots das Maçãs de fácil clique */
         .apple-hotspot {
             position: absolute;
-            width: 3.5%;
+            width: 10%;
+            max-width: 48px;
+            min-width: 38px;
             aspect-ratio: 1;
-            border-radius: 50%;
             cursor: pointer;
             transform: translate(-50%, -50%);
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            background: rgba(255, 255, 255, 0);
-            border: 2px solid transparent;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
         }
 
-        .apple-hotspot:hover {
-            background: rgba(239, 68, 68, 0.25);
-            border-color: rgba(255, 255, 255, 0.8);
-            box-shadow: 0 0 25px rgba(239, 68, 68, 0.9);
-            transform: translate(-50%, -50%) scale(1.35);
+        .apple-hotspot::after {
+            content: '';
+            position: absolute;
+            inset: -6px;
+            border-radius: 50%;
+            border: 2px solid rgba(239, 68, 68, 0.3);
+            animation: pulseRing 2.2s infinite;
+        }
+
+        @keyframes pulseRing {
+            0% { transform: scale(0.9); opacity: 1; }
+            100% { transform: scale(1.4); opacity: 0; }
+        }
+
+        .apple-hotspot:hover, .apple-hotspot:active {
+            transform: translate(-50%, -50%) scale(1.25);
         }
 
         .apple-hotspot.harvested {
             pointer-events: none;
-            background: rgba(0, 0, 0, 0.5) !important;
-            border-color: rgba(255, 255, 255, 0.15) !important;
-            box-shadow: none !important;
-            transform: translate(-50%, -50%) scale(0.85);
-            opacity: 0.4;
+            animation: harvestFly 0.7s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards;
         }
 
-        /* Estilo Base Glassmorphism (Usado no Título e no Mural) */
-        .glass-panel {
-            background: rgba(15, 23, 42, 0.45);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+        @keyframes harvestFly {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            100% { transform: translate(50vw, -50vh) scale(0.1); opacity: 0; }
         }
 
-        /* Slots de Maçãs do mural modernos */
+        /* Efeito fosco premium para a interface flutuante */
+        .glass-hud {
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.08);
+        }
+
+        /* Slots das Virtudes */
         .mural-slot {
-            width: 38px;
-            height: 38px;
-            border: 2px solid rgba(255, 255, 255, 0.25);
-            border-radius: 12px;
+            width: 34px;
+            height: 34px;
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
-            background: rgba(255, 255, 255, 0.03);
+            transition: all 0.4s ease;
+            background: rgba(255, 255, 255, 0.25);
             position: relative;
         }
 
         .mural-slot::after {
             content: attr(data-day);
             position: absolute;
-            bottom: -16px;
+            bottom: -14px;
             font-size: 8px;
-            font-weight: 700;
-            color: rgba(255, 255, 255, 0.5);
+            font-weight: 800;
+            color: #1a202c;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
 
-        /* Slot Preenchido com degradê premium */
         .mural-slot.completed {
-            background: linear-gradient(135deg, #ff5252, #c62828);
+            background: linear-gradient(135deg, #ff6b6b, #e53e3e);
             border-color: #ffffff;
-            transform: translateY(-2px) scale(1.05);
-            box-shadow: 0 8px 20px rgba(239, 68, 68, 0.5);
-        }
-
-        .mural-slot svg {
-            opacity: 0.15;
-            fill: #ffffff;
-            transition: all 0.4s ease;
-            transform: scale(0.9);
-        }
-
-        .mural-slot.completed svg {
-            opacity: 1;
-            fill: #ffffff;
             transform: scale(1.05);
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+            box-shadow: 0 4px 10px rgba(229, 62, 62, 0.3);
         }
 
-        /* Animação de entrada para o Modal */
-        @keyframes modalAppear {
-            from { transform: translate(-50%, -45%) scale(0.95); opacity: 0; }
-            to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-        }
-
-        /* Caixa da Mensagem / Modal Premium */
+        /* Card de Missão Centralizado */
         #mission-card {
             display: none;
             position: fixed;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%);
+            transform: translate(-50%, -50%) scale(0.9);
             background: #ffffff;
-            padding: 40px;
-            border-radius: 32px;
-            box-shadow: 0 40px 80px rgba(15, 23, 42, 0.35);
+            padding: 28px 24px;
+            border-radius: 28px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
             z-index: 100;
-            max-width: 460px;
-            width: 92%;
+            width: 88%;
+            max-width: 400px;
             text-align: center;
-            border: 1px solid rgba(15, 23, 42, 0.08);
-            animation: modalAppear 0.4s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
+            transition: all 0.3s ease;
+        }
+
+        #mission-card.active {
+            display: block;
+            transform: translate(-50%, -50%) scale(1);
         }
 
         .overlay {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(15, 23, 42, 0.4);
+            inset: 0;
+            background: rgba(15, 23, 42, 0.3);
             z-index: 99;
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
-            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
         }
 
-        .btn-complete {
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: white;
-            padding: 16px 32px;
-            border-radius: 16px;
-            margin-top: 24px;
-            cursor: pointer;
-            border: none;
-            font-weight: 700;
-            font-size: 0.95rem;
-            letter-spacing: 0.5px;
-            transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
-            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
-        }
-
-        .btn-complete:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.45);
-            filter: brightness(1.05);
+        .overlay.active {
+            display: block;
         }
     </style>
 </head>
-<body>
+<body class="relative w-full h-full select-none">
 
-    <div class="scenery-container">
-        <img src="images/arvore.png" alt="Cenário Árvore" class="scenery-bg">
-
-        <div class="interaction-layer" id="apples-container"></div>
-    </div>
-
-    <div class="fixed top-6 left-6 z-20 glass-panel py-3 px-5 rounded-2xl flex items-center space-x-3 select-none">
-        <div class="bg-red-500/20 p-2 rounded-xl">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="#ef4444">
-                <path d="M12 5c.44-1.21 1.48-2.26 2.8-2.7-1.12 1.47-1.18 3.32-.34 4.71C13.21 6.57 12 5 12 5zm6.5 3c-1.34 0-2.43.83-3.16 1.74-.83-.91-1.92-1.74-3.26-1.74-2.82 0-5.08 2.5-5.08 5.59 0 4.14 4.09 7.6 7.84 9.17 3.75-1.57 7.84-5.03 7.84-9.17 0-3.09-2.26-5.59-5.08-5.59z"/>
-            </svg>
-        </div>
-        <div>
-            <h1 class="text-white font-black text-lg tracking-wide leading-none">Árvore Frutífera</h1>
-            <span class="text-white/60 text-[10px] font-medium tracking-widest uppercase block mt-1">Cultivando Virtudes</span>
-        </div>
-    </div>
-
-    <div id="mural" class="glass-panel fixed top-6 right-6 z-20 p-5 rounded-3xl w-80 select-none">
-        <div class="flex justify-between items-center mb-4 pb-2 border-b border-white/10">
-            <div>
-                <h3 class="text-white font-black text-xs uppercase tracking-widest">Painel de Missões</h3>
-                <p class="text-white/50 text-[10px] font-medium mt-0.5">Realize uma boa ação por dia</p>
-            </div>
-            <div class="bg-white/10 px-3 py-1 rounded-full">
-                <span id="counter-text" class="text-white font-black text-xs tracking-wider">0 / 7</span>
-            </div>
-        </div>
+    <div class="absolute top-4 inset-x-4 z-20 flex flex-col sm:flex-row gap-3 justify-between items-start pointer-events-none">
         
-        <div id="slots-container" class="flex justify-between items-center pt-1 pb-4">
+        <div class="glass-hud py-2.5 px-4 rounded-2xl flex items-center space-x-3 pointer-events-auto shadow-sm">
+            <div class="bg-red-500/20 p-2 rounded-xl shrink-0">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#e53e3e">
+                    <path d="M12 5c.44-1.21 1.48-2.26 2.8-2.7-1.12 1.47-1.18 3.32-.34 4.71C13.21 6.57 12 5 12 5zm6.5 3c-1.34 0-2.43.83-3.16 1.74-.83-.91-1.92-1.74-3.26-1.74-2.82 0-5.08 2.5-5.08 5.59 0 4.14 4.09 7.6 7.84 9.17 3.75-1.57 7.84-5.03 7.84-9.17 0-3.09-2.26-5.59-5.08-5.59z"/>
+                </svg>
             </div>
+            <div>
+                <h1 class="text-gray-800 font-black text-sm md:text-base tracking-wide leading-none">Árvore do Bem</h1>
+                <span class="text-gray-600 text-[9px] font-bold tracking-widest uppercase block mt-0.5">Cultivando Virtudes</span>
+            </div>
+        </div>
+
+        <div class="glass-hud p-3 rounded-2xl w-full sm:w-72 pointer-events-auto shadow-sm">
+            <div class="flex justify-between items-center mb-2.5 pb-1.5 border-b border-gray-300/40">
+                <div>
+                    <h3 class="text-gray-800 font-black text-[11px] uppercase tracking-widest">Painel de Missões</h3>
+                </div>
+                <div class="bg-white/70 px-2 py-0.5 rounded-full border border-white">
+                    <span id="counter-text" class="text-gray-800 font-black text-[10px] tracking-wider">0 / 7</span>
+                </div>
+            </div>
+            <div id="slots-container" class="flex justify-between items-center gap-1 pt-0.5 pb-2"></div>
+        </div>
+    </div>
+
+    <div class="fullscreen-scenery">
+        <div class="leaves-container" id="leaves-container"></div>
+
+        <svg class="tree-vector" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+            <path d="M180,400 Q190,280 160,230 T170,140 Q200,100 230,150 T220,240 Q210,300 220,400 Z" fill="#5c4033" />
+            <path d="M165,220 Q150,180 120,170 Q140,190 160,210 Z" fill="#4a3329" />
+            <path d="M225,200 Q250,160 280,160 Q240,180 220,210 Z" fill="#4a3329" />
+            <circle cx="200" cy="140" r="75" fill="#2e7d32" opacity="0.9" />
+            <circle cx="150" cy="170" r="65" fill="#388e3c" opacity="0.95" />
+            <circle cx="250" cy="160" r="65" fill="#1b5e20" opacity="0.9" />
+            <circle cx="200" cy="100" r="60" fill="#4caf50" opacity="0.85" />
+            <circle cx="160" cy="120" r="50" fill="#81c784" opacity="0.75" />
+            <circle cx="240" cy="110" r="55" fill="#2e7d32" opacity="0.8" />
+        </svg>
+
+        <div class="ground-grass"></div>
+
+        <div class="interaction-box" id="apples-container"></div>
     </div>
 
     <div id="overlay" class="overlay" onclick="closeModal()"></div>
     
     <div id="mission-card">
-        <div class="mx-auto w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mb-5 border border-emerald-100 shadow-sm">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <div class="mx-auto w-11 h-11 bg-emerald-50 rounded-2xl flex items-center justify-center mb-3.5 border border-emerald-100 shadow-sm">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
             </svg>
         </div>
-
-        <span class="text-[11px] font-bold text-emerald-600 uppercase tracking-widest block mb-1">Valor do Dia</span>
-        <h2 id="mission-title" class="text-3xl font-black text-gray-900 tracking-tight mb-2"></h2>
-        <p id="mission-meaning" class="text-gray-500 text-sm leading-relaxed max-w-sm mx-auto mb-6 px-2"></p>
+        <span class="text-[9px] font-bold text-emerald-600 uppercase tracking-widest block mb-0.5">Valor do Dia</span>
+        <h2 id="mission-title" class="text-xl font-black text-gray-900 tracking-tight mb-1"></h2>
+        <p id="mission-meaning" class="text-gray-500 text-xs italic leading-relaxed max-w-sm mx-auto mb-3.5 px-2"></p>
         
-        <div class="bg-slate-50 p-5 rounded-2xl border border-slate-100 text-left mb-2">
-            <span class="text-[10px] font-bold uppercase text-slate-400 tracking-wider block mb-1.5">Sua Missão Prática:</span>
-            <p id="mission-task" class="text-gray-700 font-semibold text-base leading-relaxed"></p>
+        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-100 text-left mb-4">
+            <span class="text-[9px] font-bold uppercase text-slate-400 tracking-wider block mb-0.5">Sua Missão Prática:</span>
+            <p id="mission-task" class="text-gray-700 font-semibold text-xs md:text-sm leading-relaxed"></p>
         </div>
         
-        <button class="btn-complete w-full text-center" onclick="completeAction()">Marcar como Cumprida</button>
-        <button class="mt-4 text-slate-400 text-xs font-bold uppercase tracking-widest block w-full hover:text-slate-600 transition duration-200" onclick="closeModal()">Fazer Mais Tarde</button>
+        <button class="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white w-full py-3 rounded-xl font-bold text-xs md:text-sm shadow-md active:scale-[0.97] transition" onclick="completeAction()">Marcar como Cumprida</button>
+        <button class="mt-3 text-slate-400 text-[10px] font-bold uppercase tracking-widest block w-full hover:text-slate-600 transition" onclick="closeModal()">Fazer Mais Tarde</button>
     </div>
 
     <script>
         const misionesSemanales = [
-            { title: "Empatia", meaning: "A virtude de se colocar verdadeiramente no lugar do outro para compreender seus sentimentos.", task: "Dedique 10 minutos para ouvir alguém hoje sem interromper, julgar ou dar opiniões prontas." },
-            { title: "Gratidão", meaning: "O ato nobre de reconhecer e valorizar o que já temos e tudo o que recebemos dos outros.", task: "Envie uma mensagem sincera para alguém agradecendo por algo bom que essa pessoa fez por você recentemente." },
-            { title: "Gentileza", meaning: "Pequenos gestos de amor e consideração espontâneos que transformam o dia de quem os recebe.", task: "Faça um elogio autêntico e inesperado para um colega de trabalho, de estudos ou mesmo para um familiar." },
-            { title: "Paciência", meaning: "Manter a serenidade, o equilíbrio e o autocontrole diante da espera ou das contrariedades.", task: "Ao encarar uma fila ou qualquer lentidão hoje, respire fundo por 3 vezes e responda com um sorriso amigável." },
-            { title: "Solidariedade", meaning: "União legítima, apoio mútuo e compromisso prático em amparar quem se encontra em necessidade.", task: "Separe pelo menos uma peça de roupa, livro ou objeto útil em bom estado e planeje uma doação." },
-            { title: "Respeito", meaning: "Honrar a individualidade, aceitar as diferenças e valorizar o espaço sagrado do próximo.", task: "Mesmo que discorde de alguém hoje, escute até o final com atenção e valide o direito da pessoa de pensar diferente." },
-            { title: "Otimismo", meaning: "A habilidade de focar nas soluções e enxergar o aprendizado mesmo nos momentos mais desafiadores.", task: "Ao se deparar com qualquer contratempo hoje, anote imediatamente duas soluções ao invés de reclamar." }
+            { title: "Empatia", meaning: "A virtude de se colocar verdadeiramente no lugar do outro.", task: "Dedique 10 minutos para ouvir alguém hoje sem interromper ou julgar." },
+            { title: "Gratidão", meaning: "O ato nobre de reconhecer e valorizar o que já temos.", task: "Envie uma mensagem sincera agradecendo a alguém por algo bom que fez por você." },
+            { title: "Gentileza", meaning: "Pequenos gestos de amor espontâneos que transformam o dia.", task: "Faça um elogio autêntico e inesperado para alguém próximo hoje." },
+            { title: "Paciência", meaning: "Manter a serenidade e o autocontrole diante das contrariedades.", task: "Ao encarar qualquer fila ou espera hoje, respire fundo 3 vezes e sorria." },
+            { title: "Solidariedade", meaning: "Compromisso prático em amparar quem se encontra em necessidade.", task: "Separe uma peça de roupa, livro ou objeto útil em bom estado para doação." },
+            { title: "Respeito", meaning: "Honrar a individualidade e aceitar as diferenças do próximo.", task: "Mesmo que discorde de alguém hoje, escute com atenção até o final sem rebater." },
+            { title: "Otimismo", meaning: "A habilidade de focar nas soluções e enxergar o aprendizado.", task: "Ao se deparar com um contratempo hoje, foque e anote duas soluções possíveis." }
         ];
 
         let completedCount = 0;
@@ -266,14 +309,14 @@
 
         function generateMural() {
             const container = document.getElementById('slots-container');
+            container.innerHTML = '';
             for (let i = 0; i < 7; i++) {
                 const slot = document.createElement('div');
-                slot.className = 'mural-slot';
+                slot.className = 'mural-slot flex-1';
                 slot.id = `slot-${i}`;
                 slot.setAttribute('data-day', diasSemana[i]);
-                slot.title = `Missão do ${diasSemana[i]}`;
                 slot.innerHTML = `
-                    <svg width="16" height="16" viewBox="0 0 24 24">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="#ffffff" style="opacity:0.35">
                         <path d="M12 5c.44-1.21 1.48-2.26 2.8-2.7-1.12 1.47-1.18 3.32-.34 4.71C13.21 6.57 12 5 12 5zm6.5 3c-1.34 0-2.43.83-3.16 1.74-.83-.91-1.92-1.74-3.26-1.74-2.82 0-5.08 2.5-5.08 5.59 0 4.14 4.09 7.6 7.84 9.17 3.75-1.57 7.84-5.03 7.84-9.17 0-3.09-2.26-5.59-5.08-5.59z"/>
                     </svg>
                 `;
@@ -283,29 +326,54 @@
 
         function alignAppleHotspots() {
             const container = document.getElementById('apples-container');
+            container.innerHTML = '';
             
-            // Coordenadas idênticas às da sua foto arvore.png
-            const realAppleCoordinates = [
-                { top: '42.3%', left: '32.1%' },
-                { top: '28.8%', left: '39.6%' },
-                { top: '45.4%', left: '37.8%' },
-                { top: '28.1%', left: '49.1%' },
-                { top: '49.0%', left: '47.9%' },
-                { top: '41.1%', left: '59.3%' },
-                { top: '54.5%', left: '63.9%' }
+            // Coordenadas relativas dentro da caixa da árvore (mantém proporção perfeita)
+            const coordinates = [
+                { top: '32%', left: '42%' },
+                { top: '25%', left: '52%' },
+                { top: '36%', left: '60%' },
+                { top: '46%', left: '38%' },
+                { top: '48%', left: '52%' },
+                { top: '42%', left: '66%' },
+                { top: '56%', left: '58%' }
             ];
 
             misionesSemanales.forEach((mission, index) => {
                 const hotspot = document.createElement('div');
                 hotspot.className = 'apple-hotspot';
                 hotspot.id = `hotspot-${index}`;
-                hotspot.style.top = realAppleCoordinates[index].top;
-                hotspot.style.left = realAppleCoordinates[index].left;
-                hotspot.title = `Ver valor: ${mission.title}`;
+                hotspot.style.top = coordinates[index].top;
+                hotspot.style.left = coordinates[index].left;
                 
-                hotspot.onclick = () => openMission(index);
+                hotspot.innerHTML = `
+                    <svg viewBox="0 0 24 24" width="100%" height="100%">
+                        <path d="M12,5 C13,3.5 15,3.5 15.5,4.5 C14,5 13,6.5 12.5,8 C12.2,6.5 12,5.5 12,5 Z" fill="#6d4c41"/>
+                        <path d="M12,7 C9.5,7 7.5,9 7.5,11.5 C7.5,15 10,18.5 12,20 C14,18.5 16.5,15 16.5,11.5 C16.5,9 14.5,7 12,7 Z" fill="#e53e3e"/>
+                        <circle cx="10.5" cy="10" r="1.2" fill="#fc8181" opacity="0.4"/>
+                    </svg>
+                `;
+                
+                hotspot.onclick = (e) => {
+                    e.preventDefault();
+                    openMission(index);
+                };
                 container.appendChild(hotspot);
             });
+        }
+
+        function startLeafAnimation() {
+            const container = document.getElementById('leaves-container');
+            for (let i = 0; i < 12; i++) {
+                const leaf = document.createElement('div');
+                leaf.className = 'falling-leaf';
+                leaf.style.width = `${Math.random() * 6 + 6}px`;
+                leaf.style.height = `${Math.random() * 10 + 8}px`;
+                leaf.style.left = `${Math.random() * 100}%`;
+                leaf.style.animationDelay = `${Math.random() * 5}s`;
+                leaf.style.animationDuration = `${Math.random() * 4 + 4}s`;
+                container.appendChild(leaf);
+            }
         }
 
         function openMission(index) {
@@ -316,13 +384,13 @@
             document.getElementById('mission-meaning').innerText = `"${currentData.meaning}"`;
             document.getElementById('mission-task').innerText = currentData.task;
             
-            document.getElementById('overlay').style.display = 'block';
-            document.getElementById('mission-card').style.display = 'block';
+            document.getElementById('overlay').classList.add('active');
+            document.getElementById('mission-card').classList.add('active');
         }
 
         function closeModal() {
-            document.getElementById('overlay').style.display = 'none';
-            document.getElementById('mission-card').style.display = 'none';
+            document.getElementById('overlay').classList.remove('active');
+            document.getElementById('mission-card').classList.remove('active');
         }
 
         function completeAction() {
@@ -330,6 +398,7 @@
                 const currentSlot = document.getElementById(`slot-${completedCount}`);
                 if (currentSlot) {
                     currentSlot.classList.add('completed');
+                    currentSlot.querySelector('svg').style.opacity = "1";
                 }
                 
                 completedCount++;
@@ -338,13 +407,13 @@
                 const targetHotspot = document.getElementById(`hotspot-${currentMissionIndex}`);
                 if (targetHotspot) {
                     targetHotspot.classList.add('harvested');
-                    targetHotspot.title = `Missão de ${misionesSemanales[currentMissionIndex].title} concluída!`;
+                    setTimeout(() => targetHotspot.remove(), 700);
                 }
 
                 if (completedCount === 7) {
                     setTimeout(() => {
-                        alert("Parabéns! Você completou suas 7 missões e encheu a semana de boas ações! A Árvore do Bem está completamente florida graças ao seu esforço! 🌟🍎");
-                    }, 400);
+                        alert("Parabéns! Você completou suas 7 missões semanais e transformou o mundo à sua volta! 🌟🍎");
+                    }, 800);
                 }
             }
             closeModal();
@@ -353,6 +422,7 @@
         window.onload = () => {
             generateMural();
             alignAppleHotspots();
+            startLeafAnimation();
         };
     </script>
 </body>
